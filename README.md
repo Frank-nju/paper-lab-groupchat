@@ -57,6 +57,28 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe main.py --offline --interactive
 ```
 
+## 本地浏览器群聊
+
+想要使用聊天式界面，可以启动本地网页服务：
+
+```powershell
+py -3 -m paper_lab.web --offline --port 8765 `
+  --paper data\candidate_paper.pdf `
+  --problem data\problem_statement.pdf
+```
+
+打开 <http://127.0.0.1:8765>。网页显示 GPT6、Fable51、廉价模型和人工消息，并提供开始第一轮、审批、下一轮、廉价模型返工和人工返工按钮。所有内容仍然写入 `outputs/round_sessions/`，不会覆盖论文原稿。
+
+已有证据包时，可以使用：
+
+```powershell
+py -3 -m paper_lab.web --offline `
+  --evidence-pack outputs\evidence_packs\<case> `
+  --problem data\problem_statement.pdf
+```
+
+网页详细说明见 [`docs/web-ui.md`](docs/web-ui.md)。
+
 ## Linux/macOS 使用
 
 ```bash
@@ -101,4 +123,4 @@ py -3 -m paper_lab.rebattle.cli --mock `
 py -3 -m pytest
 ```
 
-当前融合后的回归测试共 16 项，覆盖双阶段消息顺序、审批门禁、定向返工、知识库加载、Evidence Audit、Consistency Gate 和 Issue Ledger；测试不调用真实 API。
+测试覆盖双阶段消息顺序、审批门禁、定向返工、知识库加载、Evidence Audit、Consistency Gate、Issue Ledger 和本地网页 API 状态机；测试不调用真实 API。

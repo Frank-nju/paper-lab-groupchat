@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101827" />
+    <title>paper-lab · 数模审计群聊</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">∑</span>
+          <div>
+            <p class="eyebrow">PAPER-LAB GROUPCHAT</p>
+            <h1>数模审计群聊</h1>
+          </div>
+        </div>
+        <div class="connection"><span class="live-dot"></span>本机运行</div>
+      </header>
+
+      <main class="layout">
+        <section class="conversation-panel">
+          <div class="conversation-head">
+            <div>
+              <p class="eyebrow">REVIEW ROOM</p>
+              <h2>评审记录</h2>
+            </div>
+            <div class="round-meta">
+              <span id="status-pill" class="status-pill idle">空闲</span>
+              <span id="round-label">尚未开始</span>
+            </div>
+          </div>
+          <div id="empty-state" class="empty-state">
+            <div class="empty-icon">◎</div>
+            <h3>准备开始一次严肃的论文会审</h3>
+            <p>先在右侧写下任务。两位高级评委会独立发言，再互读吸收，最后交给廉价模型整理成返工清单。</p>
+          </div>
+          <div id="message-list" class="message-list" aria-live="polite"></div>
+        </section>
+
+        <aside class="control-panel">
+          <div class="panel-card task-card">
+            <div class="card-title"><span class="step">01</span><h2>发起评审</h2></div>
+            <label for="task-input">本轮任务</label>
+            <textarea id="task-input" rows="4">审查论文并形成可执行修改意见</textarea>
+            <button id="start-button" class="button primary">开始第一轮 <span>↗</span></button>
+            <button id="next-button" class="button secondary">审批后开始下一轮</button>
+          </div>
+
+          <div class="panel-card approval-card">
+            <div class="card-title"><span class="step">02</span><h2>审批与返工</h2></div>
+            <p class="hint">低价模型完成后会停在等待审批。只能审批、打回低价模型，或请求人工返工。</p>
+            <button id="approve-button" class="button approve">✓ 通过当前轮</button>
+
+            <label for="worker-feedback">打回廉价模型</label>
+            <textarea id="worker-feedback" rows="3" placeholder="例如：补充 Q2 的完成性测试和证据定位"></textarea>
+            <button id="worker-button" class="button secondary">只重做廉价模型</button>
+
+            <label for="human-feedback">请求人工返工</label>
+            <textarea id="human-feedback" rows="3" placeholder="例如：先补充真实数据来源"></textarea>
+            <button id="human-button" class="button secondary">进入人工返工</button>
+
+            <label for="human-result">提交人工返工结果</label>
+            <textarea id="human-result" rows="3" placeholder="填写人工完成的证据、修改或决定"></textarea>
+            <button id="submit-human-button" class="button secondary">提交人工结果</button>
+          </div>
+
+          <div class="panel-card session-card">
+            <div class="card-title"><span class="step">03</span><h2>会话信息</h2></div>
+            <dl>
+              <div><dt>状态</dt><dd id="info-status">空闲</dd></div>
+              <div><dt>产物目录</dt><dd id="session-dir">尚未生成</dd></div>
+              <div><dt>刷新</dt><dd>每 1.5 秒同步</dd></div>
+            </dl>
+          </div>
+          <p id="toast" class="toast" role="status"></p>
+        </aside>
+      </main>
+    </div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
