@@ -1,0 +1,29 @@
+models:
+  gpt_strong:
+    model: gpt-6
+    api_key_env: GPT6_API_KEY
+    base_url_env: GPT6_BASE_URL
+    temperature: 0.15
+  fable_math:
+    model: fable-5.1
+    api_key_env: FABLE51_API_KEY
+    base_url_env: FABLE51_BASE_URL
+    temperature: 0.10
+  cheap_review:
+    model: cheap-model
+    api_key_env: CHEAP_API_KEY
+    base_url_env: CHEAP_BASE_URL
+    temperature: 0.20
+
+rebattle:
+  difficulty: strict
+  audit_model: gpt_strong
+  judges:
+    national_modeling_judge: gpt_strong
+    math_rigor_judge: fable_math
+    evidence_repro_judge: gpt_strong
+    writing_clarity_judge: cheap_review
+    devil_advocate_judge: fable_math
+  rebuttal_model: gpt_strong
+  chair_model: gpt_strong
+  max_paper_chars: 120000

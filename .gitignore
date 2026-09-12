@@ -1,0 +1,33 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.pytest_cache/
+.coverage
+
+# Local logs and generated runs
+logs/
+outputs/
+
+# Original papers, problem statements, evidence packages and data files
+data/*
+!data/README.md
+!data/.gitkeep
+*.pdf
+*.zip
+*.xlsx
+*.xls
+*.csv
+*.npy
+*.npz
+
+# Local migration backups and compatibility snapshots
+*.bak
+*original*
+*fixture*
+*backup*
+*.legacy
+*.before-*
+*.current-original
+*.compat
+
