@@ -11,8 +11,10 @@ def test_llm_config_has_bounded_timeout_and_no_hidden_retries(monkeypatch) -> No
         ModelSpec("test", "deepseek-flash", "TEST_API_KEY", "TEST_BASE_URL")
     )
 
-    assert config["timeout"] == 37
-    assert config["max_retries"] == 0
+    model_config = config["config_list"][0]
+    assert model_config["timeout"] == 37
+    assert model_config["max_retries"] == 0
+    assert "max_retries" not in config
 
 
 def test_llm_config_uses_safe_default_timeout(monkeypatch) -> None:
@@ -21,5 +23,6 @@ def test_llm_config_uses_safe_default_timeout(monkeypatch) -> None:
 
     config = _llm_config(ModelSpec("test", "deepseek-flash", "TEST_API_KEY", ""))
 
-    assert config["timeout"] == 180
-    assert config["max_retries"] == 0
+    model_config = config["config_list"][0]
+    assert model_config["timeout"] == 180
+    assert model_config["max_retries"] == 0

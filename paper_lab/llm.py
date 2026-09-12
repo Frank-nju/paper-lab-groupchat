@@ -33,6 +33,9 @@ def _llm_config(spec: ModelSpec) -> dict[str, Any]:
         "api_key": api_key,
         # AG2 不认识自定义模型名时会警告；价格未知时明确按 0 计。
         "price": [0, 0],
+        # 这两个是 OpenAI 配置项，必须放在 config_list 的模型项内。
+        "timeout": _request_timeout_seconds(),
+        "max_retries": 0,
     }
     base_url = os.getenv(spec.base_url_env, "").strip()
     if base_url:
@@ -40,9 +43,6 @@ def _llm_config(spec: ModelSpec) -> dict[str, Any]:
     return {
         "config_list": [item],
         "temperature": spec.temperature,
-        # 长论文请求必须有上限，且不让底层静默重试造成无限等待。
-        "timeout": _request_timeout_seconds(),
-        "max_retries": 0,
     }
 
 
