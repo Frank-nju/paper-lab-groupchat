@@ -11,17 +11,17 @@ workflow:
 
 models:
   gpt6:
-    model: gpt-6
+    model: deepseek-flash
     api_key_env: GPT6_API_KEY
     base_url_env: GPT6_BASE_URL
     temperature: 0.2
   fable51:
-    model: fable-5.1
+    model: deepseek-flash
     api_key_env: FABLE51_API_KEY
     base_url_env: FABLE51_BASE_URL
     temperature: 0.2
   cheap:
-    model: cheap-model
+    model: deepseek-flash
     api_key_env: CHEAP_API_KEY
     base_url_env: CHEAP_BASE_URL
     temperature: 0.1

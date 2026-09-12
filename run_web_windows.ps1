@@ -4,7 +4,7 @@ $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
 
 if (Test-Path ".venv\Scripts\python.exe") {
-    & ".venv\Scripts\python.exe" -m paper_lab.web --offline @args
+    & ".venv\Scripts\python.exe" -m paper_lab.web @args
 } else {
-    & py -3 -m paper_lab.web --offline @args
+    & py -3 -m paper_lab.web @args
 }
