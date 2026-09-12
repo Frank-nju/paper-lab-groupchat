@@ -13,6 +13,14 @@ class OnlineConfigError(RuntimeError):
     """在线模型配置缺失或 AG2 不可用。"""
 
 
+def _request_timeout_seconds() -> int:
+    raw = os.getenv("PAPER_LAB_LLM_TIMEOUT_SECONDS", "180").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 180
+
+
 def _llm_config(spec: ModelSpec) -> dict[str, Any]:
     api_key = os.getenv(spec.api_key_env, "").strip()
     if not api_key:
@@ -29,7 +37,13 @@ def _llm_config(spec: ModelSpec) -> dict[str, Any]:
     base_url = os.getenv(spec.base_url_env, "").strip()
     if base_url:
         item["base_url"] = base_url
-    return {"config_list": [item], "temperature": spec.temperature}
+    return {
+        "config_list": [item],
+        "temperature": spec.temperature,
+        # 长论文请求必须有上限，且不让底层静默重试造成无限等待。
+        "timeout": _request_timeout_seconds(),
+        "max_retries": 0,
+    }
 
 
 def run_ag2_review(config: ProjectConfig, paper_text: str, task: str) -> list[dict[str, Any]]:
