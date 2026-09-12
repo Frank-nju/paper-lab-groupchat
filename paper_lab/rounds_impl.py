@@ -6,7 +6,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .config import ProjectConfig
 from .llm import OnlineConfigError, _llm_config
@@ -181,12 +181,14 @@ class RoundController:
         problem_text: str,
         task: str,
         offline: bool = False,
+        progress_callback: Callable[[str], None] | None = None,
     ) -> None:
         self.config = config
         self.paper_path = paper_path
         self.problem_text = problem_text
         self.task = task
         self.offline = offline
+        self.progress_callback = progress_callback
         config.ensure_directories()
         stamp = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S_%f")
         self.session_dir = config.output_dir / "round_sessions" / stamp
@@ -197,10 +199,15 @@ class RoundController:
         self.history: list[dict[str, Any]] = []
         self.next_round_number = 1
 
+    def _report_progress(self, message: str) -> None:
+        if self.progress_callback is not None:
+            self.progress_callback(message)
+
     def start_round(self) -> dict[str, Any]:
         if self.current is not None and self.current["status"] != "approved":
             raise RuntimeError("当前轮次尚未审批，不能进入下一轮")
         round_number = self.next_round_number
+        self._report_progress(f"第 {round_number} 轮：正在读取论文和赛题")
         paper_text = self._read_paper()
         previous = ""
         if self.current is not None:
@@ -212,12 +219,14 @@ class RoundController:
             f"任务：{self.task}\n{previous}\n\n原始赛题（只读）：\n{self.problem_text}\n\n"
             f"论文（只读）：\n{paper_text}"
         )
+        self._report_progress(f"第 {round_number} 轮：GPT6 正在生成独立观点")
         first_gpt = self.engine.reply(
             "GPT6",
             base + "\n\n你是第一位高级评委，请独立输出一段完整观点，不读取其他评委意见。",
             round_number,
             "independent",
         )
+        self._report_progress(f"第 {round_number} 轮：Fable51 正在生成独立观点")
         first_fable = self.engine.reply(
             "Fable51",
             base + "\n\n你是第二位高级评委，请独立输出一段完整观点，不读取其他评委意见。",
@@ -228,6 +237,7 @@ class RoundController:
             _message("GPT6", "independent", first_gpt, round_number, blind=True),
             _message("Fable51", "independent", first_fable, round_number, blind=True),
         ]
+        self._report_progress(f"第 {round_number} 轮：GPT6 正在阅读后综合")
         gpt_second = self.engine.reply(
             "GPT6",
             base
@@ -238,6 +248,7 @@ class RoundController:
             "synthesis",
         )
         messages.append(_message("GPT6", "synthesis", gpt_second, round_number))
+        self._report_progress(f"第 {round_number} 轮：Fable51 正在阅读后综合")
         fable_second = self.engine.reply(
             "Fable51",
             base
@@ -248,6 +259,7 @@ class RoundController:
             "synthesis",
         )
         messages.append(_message("Fable51", "synthesis", fable_second, round_number))
+        self._report_progress(f"第 {round_number} 轮：廉价模型正在整理执行意见")
         worker = self.engine.reply(
             "CheapWorker",
             base
@@ -276,6 +288,7 @@ class RoundController:
             "rework_history": [],
             "started_at": _now(),
         }
+        self._report_progress(f"第 {round_number} 轮：正在保存结果")
         self._persist()
         return self.current
 
@@ -300,6 +313,9 @@ class RoundController:
             f"人工返工要求：{feedback}\n\n"
             "以下四条高级评委消息必须全部读取：\n"
             + _transcript(advanced)
+        )
+        self._report_progress(
+            f"第 {self.current['round_number']} 轮：廉价模型正在返工"
         )
         revised = self.engine.reply(
             "CheapWorker", prompt, self.current["round_number"], "worker_rework"

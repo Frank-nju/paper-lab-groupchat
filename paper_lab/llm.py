@@ -23,6 +23,8 @@ def _llm_config(spec: ModelSpec) -> dict[str, Any]:
         "api_type": "openai",
         "model": spec.model,
         "api_key": api_key,
+        # AG2 不认识自定义模型名时会警告；价格未知时明确按 0 计。
+        "price": [0, 0],
     }
     base_url = os.getenv(spec.base_url_env, "").strip()
     if base_url:
@@ -103,4 +105,3 @@ def run_ag2_review(config: ProjectConfig, paper_text: str, task: str) -> list[di
     records[-1]["source_opinions"] = [records[0]["content"], records[1]["content"]]
     records[-1]["paper_unchanged"] = True
     return records
-

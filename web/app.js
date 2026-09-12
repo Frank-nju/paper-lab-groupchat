@@ -3,9 +3,11 @@ const state = { lastJson: "", timer: null };
 const $ = (id) => document.getElementById(id);
 const labels = {
   idle: "空闲",
+  processing: "处理中",
   awaiting_approval: "等待审批",
   approved: "已审批",
   human_rework_required: "等待人工返工",
+  error: "执行失败",
 };
 const stageLabels = {
   independent: "独立观点",
@@ -29,11 +31,9 @@ function statusText(status) { return labels[status] || status || "空闲"; }
 
 function showToast(message = "") {
   $("toast").textContent = message;
-  if (message) window.setTimeout(() => { if ($("toast").textContent === message) $("toast").textContent = ""; }, 5000);
-}
-
-function setBusy(busy) {
-  document.querySelectorAll("button").forEach((button) => { button.disabled = busy; });
+  if (message) window.setTimeout(() => {
+    if ($("toast").textContent === message) $("toast").textContent = "";
+  }, 5000);
 }
 
 function renderMessage(message) {
@@ -61,22 +61,38 @@ function render(data) {
   if (signature === state.lastJson) return;
   state.lastJson = signature;
   const status = data.status || "idle";
+  const effectiveStatus = status === "error"
+    ? data.underlying_status || "idle"
+    : status;
   $("status-pill").textContent = statusText(status);
-  $("status-pill").className = `status-pill ${status === "awaiting_approval" ? "waiting" : status === "approved" ? "approved" : status === "human_rework_required" ? "human" : ""}`;
-  $("round-label").textContent = data.round_number ? `第 ${data.round_number} 轮` : "尚未开始";
+  $("status-pill").className = `status-pill ${
+    status === "awaiting_approval" ? "waiting"
+      : status === "approved" ? "approved"
+      : status === "human_rework_required" ? "human"
+      : status === "processing" ? "processing"
+      : status === "error" ? "error" : ""
+  }`;
+  const visibleRound = data.processing_round_number || data.round_number;
+  $("round-label").textContent = visibleRound ? `第 ${visibleRound} 轮` : "尚未开始";
   $("info-status").textContent = statusText(status);
+  $("progress-info").textContent = data.progress || data.error || "等待操作";
   $("session-dir").textContent = data.session_dir || "尚未生成";
-  if (data.default_task && !$('task-input').value.trim()) $("task-input").value = data.default_task;
+  if (data.default_task && !$("task-input").value.trim()) $("task-input").value = data.default_task;
   const messages = data.messages || [];
   $("empty-state").hidden = messages.length > 0;
   const list = $("message-list");
   list.replaceChildren(...messages.map(renderMessage));
-  $("start-button").disabled = data.round_number !== undefined;
-  $("next-button").disabled = status !== "approved";
-  $("approve-button").disabled = status !== "awaiting_approval";
-  $("worker-button").disabled = status !== "awaiting_approval";
-  $("human-button").disabled = status !== "awaiting_approval";
-  $("submit-human-button").disabled = status !== "human_rework_required";
+
+  const busy = status === "processing";
+  $("start-button").disabled = busy || data.round_number !== undefined;
+  $("next-button").disabled = busy || effectiveStatus !== "approved";
+  $("approve-button").disabled = busy || effectiveStatus !== "awaiting_approval";
+  $("worker-button").disabled = busy || effectiveStatus !== "awaiting_approval";
+  $("human-button").disabled = busy || effectiveStatus !== "awaiting_approval";
+  $("submit-human-button").disabled = busy || effectiveStatus !== "human_rework_required";
+
+  if (status === "processing" && data.progress) showToast(data.progress);
+  if (status === "error" && data.error) showToast(`执行失败：${data.error}`);
 }
 
 async function refresh() {
@@ -85,15 +101,14 @@ async function refresh() {
 }
 
 async function act(path, body, clearIds = []) {
-  setBusy(true);
-  showToast("");
+  showToast("请求已提交，后台正在执行……");
   try {
     render(await request(path, { method: "POST", body: JSON.stringify(body) }));
     clearIds.forEach((id) => { $(id).value = ""; });
   } catch (error) {
     showToast(error.message);
-    if (error.message) refresh();
-  } finally { setBusy(false); }
+    refresh();
+  }
 }
 
 $("start-button").addEventListener("click", () => act("/api/start", { task: $("task-input").value }));

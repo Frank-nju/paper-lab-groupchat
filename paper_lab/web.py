@@ -10,7 +10,7 @@ import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import RLock
+from threading import RLock, Thread
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
@@ -49,6 +49,12 @@ class WebSession:
         self.config = config
         self.default_task = task.strip() or DEFAULT_TASK
         self._lock = RLock()
+        self._processing = False
+        self._progress = ""
+        self._job_kind = ""
+        self._processing_round_number: int | None = None
+        self._last_error = ""
+        self._job_thread: Thread | None = None
         controller_class: type[RoundController] = RoundController
         controller_kwargs: dict[str, Any] = {}
         if evidence_pack_dir is not None:
@@ -60,6 +66,7 @@ class WebSession:
             problem_text=problem_text,
             task=self.default_task,
             offline=offline,
+            progress_callback=self._set_progress,
             **controller_kwargs,
         )
 
@@ -72,39 +79,66 @@ class WebSession:
                 snapshot["evidence_pack_dir"] = str(
                     self.controller.evidence_pack_dir
                 )
+            underlying_status = snapshot.get("status", "idle")
+            if self._processing:
+                snapshot["underlying_status"] = underlying_status
+                snapshot["status"] = "processing"
+                snapshot["progress"] = self._progress or "任务正在后台执行"
+                snapshot["job_kind"] = self._job_kind
+                snapshot["processing_round_number"] = self._processing_round_number
+            elif self._last_error:
+                snapshot["underlying_status"] = underlying_status
+                snapshot["status"] = "error"
+                snapshot["error"] = self._last_error
             return snapshot
 
     def start(self, task: str | None = None) -> dict[str, Any]:
         with self._lock:
+            self._ensure_not_processing()
             if self.controller.current is not None:
                 raise RuntimeError("当前已有轮次，请使用“下一轮”或先完成当前审批")
             self.controller.task = self._task(task)
-            self.controller.start_round()
-            return self.status()
+            return self._launch_locked(
+                "第一轮评审",
+                self.controller.next_round_number,
+                self.controller.start_round,
+            )
 
     def next_round(self, task: str | None = None) -> dict[str, Any]:
         with self._lock:
+            self._ensure_not_processing()
             if self.controller.current is None:
                 raise RuntimeError("还没有已审批轮次，请先开始第一轮")
             if self.controller.current["status"] != "approved":
                 raise RuntimeError("当前轮次尚未审批，不能进入下一轮")
             if task and task.strip():
                 self.controller.task = task.strip()
-            self.controller.start_round()
-            return self.status()
+            return self._launch_locked(
+                "下一轮评审",
+                self.controller.next_round_number,
+                self.controller.start_round,
+            )
 
     def approve(self, approved_by: str = "human") -> dict[str, Any]:
         with self._lock:
+            self._ensure_not_processing()
             self.controller.approve(approved_by.strip() or "human")
             return self.status()
 
     def worker_rework(self, feedback: str) -> dict[str, Any]:
         with self._lock:
-            self.controller.redo_worker(self._required_text(feedback, "低价模型返工意见"))
-            return self.status()
+            self._ensure_not_processing()
+            feedback_text = self._required_text(feedback, "低价模型返工意见")
+            self._require_awaiting_approval("低价模型返工")
+            return self._launch_locked(
+                "廉价模型返工",
+                self.controller.current["round_number"],
+                lambda: self.controller.redo_worker(feedback_text),
+            )
 
     def human_rework(self, feedback: str) -> dict[str, Any]:
         with self._lock:
+            self._ensure_not_processing()
             self.controller.request_human_rework(
                 self._required_text(feedback, "人工返工意见")
             )
@@ -112,10 +146,60 @@ class WebSession:
 
     def human_submit(self, result: str) -> dict[str, Any]:
         with self._lock:
+            self._ensure_not_processing()
             self.controller.submit_human_rework(
                 self._required_text(result, "人工返工结果")
             )
             return self.status()
+
+    def _launch_locked(
+        self,
+        job_kind: str,
+        round_number: int,
+        action: Callable[[], Any],
+    ) -> dict[str, Any]:
+        self._processing = True
+        self._progress = f"{job_kind}：准备开始"
+        self._job_kind = job_kind
+        self._processing_round_number = round_number
+        self._last_error = ""
+        self._job_thread = Thread(
+            target=self._run_job,
+            args=(action,),
+            name="paper-lab-web-job",
+            daemon=True,
+        )
+        self._job_thread.start()
+        return self.status()
+
+    def _run_job(self, action: Callable[[], Any]) -> None:
+        try:
+            action()
+        except Exception as exc:
+            with self._lock:
+                self._processing = False
+                self._progress = ""
+                self._last_error = str(exc)
+        else:
+            with self._lock:
+                self._processing = False
+                self._progress = ""
+                self._last_error = ""
+
+    def _set_progress(self, message: str) -> None:
+        with self._lock:
+            if self._processing:
+                self._progress = message
+
+    def _ensure_not_processing(self) -> None:
+        if self._processing:
+            raise RuntimeError("当前任务正在后台执行，请等待完成后再操作")
+
+    def _require_awaiting_approval(self, action: str) -> None:
+        if self.controller.current is None:
+            raise RuntimeError(f"没有可供{action}的当前轮次")
+        if self.controller.current["status"] != "awaiting_approval":
+            raise RuntimeError(f"{action}只能从等待审批状态发起")
 
     def _task(self, task: str | None) -> str:
         selected = (task or self.default_task).strip()
