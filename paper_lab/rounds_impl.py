@@ -15,6 +15,7 @@ from .storage import read_paper
 
 KNOWLEDGE_FILES = (
     "SKILL.md",
+    "references/cumcm-2026-hard-constraints.md",
     "references/cumcm-evidence-audit.md",
     "references/cumcm-attack-checklist.md",
     "references/issue-schema.md",

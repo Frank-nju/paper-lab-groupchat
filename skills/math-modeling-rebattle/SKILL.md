@@ -16,7 +16,7 @@ description: 对 CUMCM/MCM/ICM 等数学建模论文先执行 CUMCM 证据审计
 7. `Round 2`：对应专业评委逐 issue 复核；
 8. `Chair`：综合 Evidence Audit、盲审、rebuttal、复核结果作最终裁决。
 
-执行前必须阅读 `references/cumcm-evidence-audit.md`、`references/cumcm-attack-checklist.md` 和 `references/issue-schema.md`。
+执行前必须阅读 `references/cumcm-2026-hard-constraints.md`、`references/cumcm-evidence-audit.md`、`references/cumcm-attack-checklist.md` 和 `references/issue-schema.md`。涉及 CUMCM 2026 时，2026 年官方规则、论文格式规范和 AI 工具使用规定是 P0 硬约束；规则文件优先于本 Skill，发现规则变化必须先更新知识库。
 
 ## 强制边界
 
