@@ -11,10 +11,10 @@ description: 对全国大学生数学建模竞赛 2026 论文、赛题附件、�
 
 执行前必须阅读：
 
-- `skills/math-modeling-rebattle/references/cumcm-2026-hard-constraints.md`
-- `skills/math-modeling-rebattle/references/cumcm-evidence-audit.md`
-- `skills/math-modeling-rebattle/references/cumcm-attack-checklist.md`
-- `skills/math-modeling-rebattle/references/issue-schema.md`
+- `references/cumcm-2026-hard-constraints.md`
+- `references/cumcm-evidence-audit.md`
+- `references/cumcm-attack-checklist.md`
+- `references/issue-schema.md`
 
 2026 年官方规则发生变化时，以官方文件为准，更新硬约束文件后再审计。当前官方依据已在硬约束文件中登记：参赛规则、论文格式规范、AI 工具使用规定。
 
